@@ -1,0 +1,2 @@
+var wsServer='wss://localhost:8443/ws/chat';
+var httpServer='https://localhost:8443';
