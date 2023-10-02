@@ -1,5 +1,6 @@
-# Personal-Assistant
-OpenLink Personal Assistant (OpenAI Chat client)
+# Personal-Assistant Client 
+
+This project comprises the client parts of OpenLink Personal Assistant (a Single-Page Application based OpenAI Chat client).
 
 ## Installation
 
