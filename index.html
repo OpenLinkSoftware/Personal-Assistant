@@ -1,24 +1,24 @@
 <!DOCTYPE html>
 <html>
 <!--
-  
-    This file is part of the OpenLink Software Personal Assistant project
-  
-    Copyright (C) 2023 OpenLink Software
-  
+
+    This file is part of the OpenLink Software Personal Assistant project.
+
+    Copyright (C) 2024 OpenLink Software
+
     This project is free software; you can redistribute it and/or modify it
     under the terms of the GNU General Public License as published by the
     Free Software Foundation; only version 2 of the License, dated June 1991.
-  
+
     This program is distributed in the hope that it will be useful, but
     WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
     General Public License for more details.
-  
+
     You should have received a copy of the GNU General Public License along
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
-  
+
 -->
     <head>
         <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -30,6 +30,7 @@
         <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js" integrity="sha512-rdhY3cbXURo13l/WU9VlaRyaIYeJ/KBakckXIvJNAQde8DgpOmE+eZf7ha4vdqVjTtwQt69bD2wH2LXob/LB7Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
         <script src="//cdn.jsdelivr.net/npm/markdown-it@13.0.1/dist/markdown-it.min.js" integrity="sha256-hNyljag6giCsjv/yKmxK8/VeHzvMDvc5u8AzmRvm1BI=" crossorigin="anonymous"></script>
         <script src="//cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.11/clipboard.min.js" integrity="sha512-7O5pXpc0oCRrxk8RUfDYFgn0nO1t+jLuIOQdOMRp4APB7uZ4vSjspzp5y6YDtDs4VzUSTbWzBFZ/LKJhnyFOKw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+         <script src="//cdn.jsdelivr.net/npm/rdflib@2.2.32/dist/rdflib.min.js"></script>
         <link rel="icon" type="image/x-icon" href="images/favicon.ico">
     </head>
     <body>
@@ -41,9 +42,11 @@
                             data-bs-toggle="modal" data-bs-target=".bd-modal-tune-sel">
                         <span data-toggle="tooltip" title="Fine-Tune" data-placement="right"><img src="svg/book.svg"/></span>
                     </button>
-                    <a class="share-btn" href="#" data-toggle="tooltip" data-placement="right" title="Copies link to chat session.">
-                        <img src="svg/box-arrow-up.svg"/>
-                    </a>
+                    <button class="btn" data-bs-toggle="modal" data-bs-target=".bd-modal-share" id="archive-btn">
+                        <span data-toggle="tooltip" data-placement="right" title="Share chat session.">
+                            <img src="svg/box-arrow-up.svg"/>
+                        </span>
+                    </button>
                     <button type="button" id="function-btn" class="btn"
                             data-bs-toggle="modal" data-bs-target=".bd-modal-fn-sel">
                         <span data-toggle="tooltip" title="Callback Functions" data-placement="right"><img src="svg/gear.svg"/></span>
@@ -52,7 +55,7 @@
                     <div class="dropdown" data-toggle="tooltip" title="Selected Model">
                         <button type="button" class="btn dropdown-toggle" data-bs-toggle="dropdown"
                                               id="oai-model" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                            <span class="model">GPT-4</span><span class="caret"></span>
+                            <span class="model">gpt-4</span><span class="caret"></span>
                         </button>
                         <ul class="dropdown-menu" id="oai-model-id"></ul>
                     </div>
@@ -61,7 +64,7 @@
                     <div class="user_icon">
                         <a id="api-key-modal-btn"
                                 data-bs-toggle="modal" href="#api-key-modal">
-                            <span title="API Key" data-placement="left" data-toggle="tooltip">
+                            <span title="API Key" data-placement="left">
                                 <img class="key-icon" src="svg/key.svg"/>
                             </span>
                         </a>
@@ -90,6 +93,12 @@
                             <span class="float-end" id="topics-refresh">
                                 <img src="svg/arrow-clockwise.svg"/>
                             </span>
+                            <span class="float-end" id="import-btn" data-toggle="tooltip" title="Import session from storage">
+                                <img src="svg/box-arrow-down.svg"/>
+                            </span>
+                            <span class="float-end" id="export-btn" data-toggle="tooltip" title="Export session to storage">
+                                <img src="svg/box-arrow-up.svg"/>
+                            </span>
                         </span>
                         <div class="list-group-item list-group-item-filter">
                             <div class="list-item-icon">
@@ -110,10 +119,24 @@
             <div class="stop_wrapper">
                 <button type="button" class="stop btn-inline">Stop</button>
             </div>
-            <div class="bottom_wrapper clearfix">
+            <div class="bottom_wrapper">
             <div class="loader"></div>
                 <div class="message_input_wrapper">
-                    <textarea class="message_input" placeholder="Type your question here (use ⇧⏎ for line break)..." ></textarea></div>
+                    <input type="file" style="display:none;" multiple id="img-upload"/>
+                    <div class="grow-wrap">
+                        <textarea class="message_input" placeholder="Type your question here (use ⇧⏎ for line break)..."></textarea>
+                    </div>
+                    <button type="button" id="start-btn" class="audio-btn">
+                        <img src="svg/mic-mute.svg"/></span>
+                    </button>
+                    <button type="button" id="stop-btn" class="audio-btn">
+                        <div class="pulse-ring"></div>
+                        <img src="svg/mic.svg"/></span>
+                    </button>
+                    <button type="button" id="image-upload" class="image-btn">
+                        <img src="svg/paperclip.svg"/></span>
+                    </button>
+                </div>
                 <div class="send_message">
                     <div class="icon"></div>
                     <div class="text">Send</div>
@@ -126,13 +149,21 @@
                     <div class="icon"></div>
                     <div class="text">Reconnect</div>
                 </div>
+            <div class="footer">
+                <a href="https://virtuoso.openlinksw.com" target="_blank">
+                    <img src="images/virt_power_no_border.png" alt="Powered by OpenLink Virtuoso"/>
+                </a>&#160;
+                <span>OpenLink Personal Assistant <span id="vad_version"></span> Copyright © 2024 OpenLink Software</span>
+            </div>
             </div>
         </div>
         <div class="message_template">
-            <li class="message"><div class="avatar"></div>
+            <li class="message" data-verified="0"><div class="avatar"></div>
                 <div class="text_wrapper">
+                    <button class="btn share-prompt-btn hidden"><img src="svg/box-arrow-up.svg"/></button>
                     <button class="btn clipboard"><img src="svg/clipboard.svg"/></button>
                     <div class="text"></div>
+                    <button class="btn like hidden" title="Accepted answer"><img src="svg/star.svg"/></button>
                 </div>
             </li>
         </div>
@@ -148,7 +179,6 @@
             </li>
         </div>
         <input type="text" id="item-action" style="display:none;"/>
-        <div id="markdown-content" style="display:none;"/></div>
         <div class="list-group-item-template">
             <div class="list-item-icon">
                 <input type="text" class="list-item-edit" value=""/>
@@ -159,11 +189,27 @@
                 <span class="btn-icon btn-confirm"><img src="svg/check-lg.svg"/></span>
             </div>
         </div>
+        <div class="list-group-system-item-template">
+            <div class="list-item-icon system-topic">
+                <span class="system-btn" id="system-new">
+                    <img src="svg/chat-right.svg"/>
+                    New Chat
+                </span>
+            </div>
+        </div>
+        <div class="image-upload-template">
+            <div class="user-image">
+                <div class="user-img-zoom-in"><img src="svg/zoom-in.svg"/></div>
+                <div class="user-img-zoom-out"><img src="svg/zoom-out.svg"/></div>
+                <img src="" class="user-img-src"/>
+                <div class="user-img-remove"><img src="svg/x-circle.svg"/></div>
+            </div>
+        </div>
         <div class="bd-modal-tune-sel modal fade" tabindex="-1" role="dialog" aria-labelledby="fineTuneSelection" aria-hidden="true">
             <div class="modal-dialog" role="document">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h4 class="modal-title" id="fineTuneSelection">Configured prompts</h4>
+                        <h4 class="modal-title" id="fineTuneSelection">Session Configurations</h4>
                             <span class="float-right" data-bs-dismiss="modal">
                                 <img src="svg/x-circle.svg"/>
                             </span>
@@ -174,7 +220,7 @@
             </div>
         </div>
         <div class="modal fade bd-modal-fn-sel" tabindex="-1" role="dialog" aria-labelledby="functionSelection" aria-hidden="true">
-            <div class="modal-dialog" role="document">
+            <div class="modal-dialog w-50" role="document">
                 <div class="modal-content">
                     <div class="modal-header">
                         <h3 class="modal-title" id="functionSelection">Helper functions</h3>
@@ -186,15 +232,60 @@
                         <div class="form-group">
                             <label for="temperature_in" data-toggle="tooltip" data-placement="top" title="Temperature is a parameter that controls the “creativity” or randomness of the text generated by GPT. A higher temperature (e.g., 0.7) results in more diverse and creative output, while a lower temperature (e.g., 0.2) makes the output more deterministic and focused." class="form-label">temperature</label>
                             <input type="text" id="temperature" class="form-control params" value="1"/>
-                            <input type="range" class="form-range" id="temperature_in" min="0" step="0.01" max="2" value="1">
+                            <input type="range" class="form-range" id="temperature_in" min="0" step="0.01" max="2" value="1"/>
                             <label for="top_p_in" data-toggle="tooltip" data-placement="top" title="Top_p sampling is an alternative to temperature sampling. Instead of considering all possible tokens, GPT considers only a subset of tokens (the nucleus) whose cumulative probability mass adds up to a certain threshold." class="form-label">top_p</label>
                             <input type="text" id="top_p" class="form-control params" value="1"/>
-                            <input type="range" class="form-range" id="top_p_in" min="0" max="1" step="0.01" value="1">
-                            <input type="checkbox" id="fn-debug" class="form-check-input"  checked="true"/>
-                            <label for="fn-debug" data-toggle="tooltip" data-placement="top" title="Enable function call debug output">Function call debug</label>
+                            <input type="range" class="form-range" id="top_p_in" min="0" max="1" step="0.01" value="1"/>
+                            <label for="max_tokens" data-toggle="tooltip" data-placement="top" title="Maximum number of tokens before to stop generation, infinite is limited by API limits, certain models as gpt-4-vision always needs this setting to be specified">Max tokens</label>
+                            <input type="text" id="max_tokens" class="form-control params" value="300"/>
+                            <input type="range" class="form-range" id="max_tokens_in" min="0" max="4096" step="1"/>
+
+                            <label for="max_items" data-toggle="tooltip" data-placement="top"
+                                title="Maximum number of session entries visible in log list">Max Sessions</label>
+                            <input type="text" id="max_items" class="form-control params" value="500"/>
+                            <input type="range" class="form-range" id="max_items_in" min="20" max="500" step="10"/>
+                            <div class="form-check form-switch">
+                                <input type="checkbox" id="fn-debug" class="form-check-input"  checked="true"/>
+                                <label for="fn-debug" data-toggle="tooltip" class="form-check-label"data-placement="top" title="Enable function call debug output">Function call debug</label>
+                            </div>
+                            <div class="form-check form-switch" id="audio-ctl">
+                                <input class="form-check-input" type="checkbox" id="enable_audio"/>
+                                <label class="form-check-label" for="enable_audio" data-toggle="tooltip" data-placement="top" title="Enable voice input transcription">Enable audio input</label>
+                            </div>
+                            <div class="form-check form-switch" id="image-resolution">
+                                <input class="form-check-input" type="checkbox" id="image_resolution" checked="true"/>
+                                <label class="form-check-label" for="image_resolution" data-toggle="tooltip" data-placement="top" title="Enable high image resolution">Enable high image resolution</label>
+                            </div>
                         </div>
                     </div>
                     <div class="modal-footer">
+                        <button type="button" class="btn" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal fade bd-modal-share" tabindex="-1" role="dialog" aria-labelledby="shareDialog" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3 class="modal-title" id="shareDialog">Share Chat Session</h3>
+                    </div>
+                    <div class="modal-body">
+                        <label for="storage-folder">Personal Storage <img data-toggle="tooltip"
+                            title="A storage folder URI to be used to store current chat session, make sure you have access to with currently logged-in account. If it is not automatically detected then your profile do not support pim:storage or not accessble."
+                            src="svg/question-circle.svg"/></label>
+                        <div class="input-group mb-3">
+                            <input type="text" id="storage-folder" class="form-control"/>
+                            <button id="upload-btn" type="button" data-toggle="tooltip" class="btn" title="Upload chat session to personal storage.">Upload</button>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button id="share-btn" type="button" data-toggle="tooltip" class="btn" title="Copies link to chat session.">
+                            <img src="svg/link.svg"/>
+                            Copy link</button>
+                        <button id="copy-btn" type="button" data-toggle="tooltip" class="btn" title="Copies chat session to clipbooard.">
+                            <img src="svg/clipboard.svg"/>
+                            Copy to Clipboard</button>
                         <button type="button" class="btn" data-bs-dismiss="modal">Close</button>
                     </div>
                 </div>
@@ -207,7 +298,7 @@
                         <h3 class="modal-title" data-toggle="tooltip" data-placement="top" title="You can find your API key at https://platform.openai.com/account/api-keys.">OpenAI API key</h3>
                     </div>
                     <div class="modal-body">
-                        <input type="text" id="api-key" placeholder="Enter your API Key"/>
+                        <input type="text" id="api-key" value="" placeholder="Enter your API Key"/>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn" id="btn-api-key-remove">Remove</button>
@@ -216,6 +307,37 @@
                 </div>
             </div>
         </div>
+        <div class="modal" tabindex="-1" role="dialog" id="upload-status">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Session log is uploaded:</h5>
+                    </div>
+                    <div class="modal-body">
+                        <a id="upload-location" target="_blank"></a>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn" data-bs-dismiss="modal" id="upload-status-btn">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="error-modal" class="modal fade">
+	<div class="modal-dialog modal-confirm">
+		<div class="modal-content">
+			<div class="modal-header justify-content-center">
+				<div class="icon-box">
+                                    <img src="svg/x-lg.svg"/>
+				</div>
+			</div>
+			<div class="modal-body text-center">
+				<h4>Authorization Failed</h4>
+				<p>Please check credentials.</p>
+				<button class="btn btn-success" data-bs-dismiss="modal">Try Again</button>
+			</div>
+		</div>
+	</div>
+        <script src="version.js"></script>
         <script src="config.js"></script>
         <script src="lib/solid-client-authn.bundle.js" integrity="sha512-xCsU0QV+pkzlr9dAZIJT22XBI4HTmumAb6Y6zwNiauzMS6djYzY1vbXWCZKbdWsqJIqg86VM795REQfcJcql2Q=="></script>
         <script type="text/javascript" src="chat.js"></script>

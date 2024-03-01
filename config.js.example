@@ -1,2 +1,4 @@
-var wsServer='wss://localhost:8443/ws/chat';
-var httpServer='https://localhost:8443';
+// var wsServer='wss://netid-qa.openlinksw.com:8443/ws/chat'; // uncomment to use different host
+// var httpServer='https://netid-qa.openlinksw.com:8443';  // see above
+// var enableVoice=true; // enable wisper interface for input
+// var authenticationType='Bearer'; // can swith to Bearer if DPoP is blocked by proxy

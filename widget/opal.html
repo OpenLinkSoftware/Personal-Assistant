@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <script src="//code.jquery.com/jquery-3.7.0.min.js" integrity="sha256-2Pmvv0kuTBOenSvLm6bvfBSSHrUJ+3A7x6P5Ebd07/g="
+            crossorigin="anonymous"></script>
+        <link href="//cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet"
+            integrity="sha384-rbsA2VBKQhggwzxH7pPCaAqO46MgnOM80zW1RWuH61DGLwZJEdK2Kadq2F9CUG65" crossorigin="anonymous">
+        <script src="//cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"
+            integrity="sha384-kenU1KFdBIe4zVF0s0G1M5b4hcpxyD9F7jL+jjXkk+Q2h455rYXK/7HAuoJl+0I4" crossorigin="anonymous"></script>
+        <script src="//cdn.jsdelivr.net/npm/markdown-it@13.0.1/dist/markdown-it.min.js" integrity="sha256-hNyljag6giCsjv/yKmxK8/VeHzvMDvc5u8AzmRvm1BI=" crossorigin="anonymous"></script>
+<style>
+
+body {
+    font-family: Arial, Helvetica, sans-serif;
+    height: 100vh;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+h2 {
+    padding: 20px;
+    text-align: center;
+    font-size: 18pt;
+}
+
+.open-button {
+  background-color: rgb(0, 137, 194);
+  color: white;
+  border: none;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  cursor: pointer;
+  position: fixed;
+  bottom: 40px;
+  right: 40px;
+}
+
+.chat-popup {
+  display: none;
+  position: fixed;
+  bottom: 10px;
+  right: 15px;
+  border: 1px solid lightgrey;
+  border-radius: 10px;
+  z-index: 10;
+}
+
+.form-container {
+  min-width: 400px;
+  padding: 10px;
+  border-radius: 10px;
+  background-color: white;
+}
+
+.form-container #message_input {
+  width: 100%;
+  padding: 15px;
+  margin: 5px 0 0px 0;
+  border-radius: 10px;
+  border: 1px solid lightgrey;
+  resize: none;
+  min-height: 70px;
+}
+
+.form-container textarea:focus {
+  outline: none;
+}
+
+.form-container textarea {
+    font-size: 10pt;
+}
+
+.form-container .send {
+  background-color: rgb(0, 137, 194);
+  color: white;
+  border: none;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  cursor: pointer;
+  position: absolute;
+  bottom: 30px;
+  right: 20px;
+}
+
+.send img {
+    filter: invert();
+}
+
+.form-container {
+}
+
+.form-container .btn:hover, .open-button:hover {
+  opacity: 1;
+}
+
+.chat-popup h1 {
+    font-size: 12pt;
+}
+
+.messages {
+    overflow: scroll;
+    min-height: 400px;
+    max-height: 600px;
+    width: 400px;
+    border: 1px solid lightgrey;
+    border-radius: 10px;
+    display: block;
+}
+
+.close-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 0 0 0 0;
+    border: none;
+}
+
+.close-btn:hover {
+    cursor: pointer;
+}
+
+.user-message, .agent-message {
+    font-size: 10pt;
+    padding: 5px;
+    border-radius: 5px;
+    width: fit-content;
+    margin: 5px;
+}
+
+.user-message {
+    background-color: lightgreen;
+}
+
+.user-message pre {
+    margin: 0px;
+}
+
+.agent-message {
+    background-color: lightblue;
+}
+
+.form-group {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+}
+
+.help {
+    text-align: center;
+    font-size: 18px;
+}
+
+.loggedin-btn {
+    display:none;
+}
+
+.loggedin-btn img {
+    width: 35px;
+    height: 35px;
+}
+
+.prompt {
+    background-color: lightgreen;
+    border-radius: 10px;
+    border: 1px solid lightgreen;
+    padding: 20px;
+    margin: 20px;
+    cursor: pointer;
+}
+
+.prompt:hover {
+    opacity:1;
+    background-color: white;
+    cursor: pointer;
+}
+
+</style>
+</head>
+<body>
+
+<h2>OPAL Widget Demo</h2>
+
+<div class="form-group mt-3">
+    <a class="loggedin-btn" data-placement="bottom" target="_blank" href="" title=""><img id="uid-icon" src="person-fill-check.svg"></a>
+    <button id="loginID" type="button" class="btn btn-primary hidden">Login</button>
+    <button id="logoutID" type="button" class="btn btn-secondary hidden">Logout</button>
+</div>
+
+<div class="help">Click on the button at the bottom, right of this page to talk with OPAL.</div>
+
+  <div class="d-flex h-75 align-items-center justify-content-center">
+      <div class="d-flex flex-column mb-3">
+          <button type="button" class="prompt">How to install Virtuoso on Linux?</button>
+          <button type="button" class="prompt">How to install Virtuoso on Windows?</button>
+      </div>
+      <div class="d-flex flex-column mb-3">
+          <button type="button" class="prompt">How to install Virtuoso on MacOs?</button>
+          <button type="button" class="prompt">How to install Virtuoso license?</button>
+      </div>
+  </div>
+<button class="open-button" title="OPAL">OPAL</button>
+
+<div class="chat-popup" id="opal-form">
+  <div class="form-container">
+    <h1>Talk with OPAL</h1>
+    <div class="messages"></div>
+    <textarea placeholder="Type message.." id="message_input" required></textarea>
+    <button type="button" class="send"><img src="send.svg"/></button>
+    <span type="button" class="close-btn"><img src="x-circle.svg"/></span>
+  </div>
+</div>
+<!-- these two have to be included in order Opal() to work, the rest about jQuery/Bootstrap/design is deveoper choice -->
+<script src="solid-client-authn.bundle.js"></script>
+<script src="opal.js"></script>
+<script>
+var md = window.markdownit({
+                               html:true,
+                               breaks:true,
+                               linkify:true,
+                               langPrefix:'language-',
+    });
+$(function () {
+
+    const thisUrl = window.location;
+    const baseUrl = thisUrl .protocol + "//" + thisUrl.host;
+    // OIDC client variable
+    var authClient = solidClientAuthentication.default;
+    var session = authClient.getDefaultSession();
+    // OPAL interface, params: OIDC client var, backend host&port, callbacks for incoming message and error callback 
+    // if callbacks not given behaviour is not defined
+    var opal = new Opal(authClient, new URL(window.location).host, receiveMessage, errorHandler, {
+            model: 'gpt-3.5-turbo', // next three are to calibrate model, look at OpenAI docs.
+            top_p: 0.5,
+            temperature: 0.2,
+            module: 'chat-help', // fine-tune module to init session, e.g. data-twingler-config, chat-help et.c see docs.
+            functions: [], // backend registered functions, can be added unless not given otherwise via module
+        });
+    var $currentMessage = undefined; // keep DOM element of the receiving message as it coming on chunks
+    var currentText = undefined;
+    var $messages = $('.messages'); // the messages list, shortcut
+
+    function receiveMessage(role, chunk) { // this is a handler see above Opal() to draw incoming messages
+        if (role === 'function' || role === 'tool' || role === 'function_response') {
+            // in this demo we do not print functions & response from them
+            return;
+        }
+       if (chunk === '[DONE]' || chunk === '[LENGTH]') { // standart markers of backend when stops sending data 
+          $currentMessage = undefined;
+           currentText = undefined;
+           $messages.animate({ scrollTop: $messages.prop('scrollHeight') }, 0);
+           // optionally we can enable the predefined prompts here
+           $('.prompt').on ('click', sendPredefinedPrompt);
+       } else if (!$currentMessage) { // this is first chunk of the answer
+           currentText = chunk;
+           $currentMessage = $('<div class="agent-message"></div>');
+           $currentMessage.html(md.render(currentText));
+           $messages.append($currentMessage);
+       } else { // next chunk
+           currentText = currentText + chunk;
+           $currentMessage.html(md.render(currentText));
+       }
+    }
+
+    function errorHandler (error) { // error handler, called by Opal() if something f goes wrong
+        let $message = $('<div class="agent-message">'+error+'</div>');
+        $messages.append($message);
+    }
+
+    $('.open-button').on('click', function(e) {  // to open chat popup 
+        $('.open-button').hide();
+        $('#opal-form').fadeIn();
+    });
+    $('.close-btn').on('click', function(e) { // self evident
+        $('#opal-form').hide();
+        $('.open-button').show();
+    });
+
+    $('#message_input').keypress(function (e) { // enter or shift + enter 
+        if (!e.shiftKey && e.which === 13) {
+            let text = $('#message_input').val().trim();
+            e.preventDefault();
+            sendPrompt(text);
+        }
+    });
+
+    $('.send').on('click', function(e) { // see above, doing same thing
+        let $messages = $('.chat-popup .messages');
+        let text = $('#message_input').val().trim();
+        sendPrompt(text);
+     });
+
+     // wrapper to draw message and call OPAL widget
+     async function sendPrompt (text) {
+        if (text.length) {
+            $messages.append ($(`<div class="user-message"><pre>${text}</pre></div>`));
+            $messages.animate({ scrollTop: $messages.prop('scrollHeight') }, 0);
+            $('.prompt').off();
+            opal.send (text);
+            $('#message_input').val('');
+        }
+     }
+
+    // wrapper to handle predefined prompts
+    async function sendPredefinedPrompt(e) {
+        let text = e.target.innerHTML;
+        if ($('.open-button:visible').length > 0) {
+            $('.open-button').hide();
+            $('#opal-form').fadeIn();
+        }
+        // disable the predefined promps, can enable once this one complete
+        sendPrompt (text);
+    }
+
+
+     // the below is code to login/logout with OIDC client, can see more examples of it in SPA, OPAL etc.
+     // the only specific thing is call to Opal().connect after login see vvv 
+     $('#loginID').click(authLogin);
+     $('#logoutID').click(authLogout);
+     
+     async function authLogout() {
+        let url = new URL(window.location.href);
+        url.search = '';
+        await authClient.logout();
+        location.replace(url.toString());
+    }
+
+    async function authLogin() {
+        let url = new URL(window.location.href).toString();
+        authClient.login({
+                         oidcIssuer: baseUrl,
+                         redirectUrl: url,
+                         tokenType: 'DPoP',
+                         clientName: 'OpenLink Demo'
+        });
+    }
+
+    authClient.handleIncomingRedirect({restorePreviousSession: false}).then((info) => {
+        loggedIn = info?.isLoggedIn;
+        $('#loginID').toggleClass('d-none', loggedIn);
+        $('#logoutID').toggleClass('d-none', !loggedIn);
+        if (info?.webId != null) {
+            $('.loggedin-btn').show();
+            $('.loggedin-btn').attr('href', info.webId);
+            $('.loggedin-btn').attr('title', info.webId);
+            $('.loggedin-btn').tooltip({container: 'body'});
+            // here we after OIDC login succeed we call Opal.connect() it does what it does and then send() can be used
+            // for details see code in opal.js
+            opal.connect();
+            // end of connecting Opal
+            $('.prompt').on ('click', sendPredefinedPrompt);
+        }
+    }).catch ((e) => {
+        errorHandler (e.toString());
+    });
+});
+</script>
+
+</body>
+</html>
+
