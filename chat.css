@@ -220,6 +220,14 @@ body {
     font-size: 10pt;
 }
 
+.stats {
+    display: inline-block;
+    position: absolute;
+    left: 25px;
+    font-size: 10pt;
+    margin-top: 5px;
+}
+
 .bottom_wrapper {
   display: grid;
   grid-template-columns: auto 140px;

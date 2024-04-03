@@ -146,14 +146,16 @@ var clipboard = new ClipboardJS('.clipboard', {
                         copyLinkToClipboard(prompt_id);
                     }).toggleClass('d-none',!loggedIn);
 
-                    if ('left' != _this.message_side && loggedIn && $('.messages').children().length > 0) {
+                    if ('left' != _this.message_side && $('.messages').children().length > 0) {
                         let $like = $message.find('.like');
-                        $like.click (function(e) {
-                            e.preventDefault();
-                            let prompt_id = $(this).closest('.message').attr('id');
-                            setPromptFlag(prompt_id);
-                        });
-                        $like.toggleClass('d-none',!(loggedIn && null != _this.prompt_id));
+                        if (loggedIn) {
+                            $like.click (function(e) {
+                                e.preventDefault();
+                                let prompt_id = $(this).closest('.message').attr('id');
+                                setPromptFlag(prompt_id);
+                            });
+                        }
+                        $like.toggleClass('d-none',!_this.prompt_id);
                         if (_this.verified) {
                             $like.find('img').attr('src', 'svg/star-fill.svg');
                         }
@@ -161,8 +163,8 @@ var clipboard = new ClipboardJS('.clipboard', {
                     } else {
                         $message.find('.like').toggleClass('d-none',true);
                     }
-                    $message.attr('data-verified', _this.verified);
 
+                    $message.attr('data-verified', _this.verified);
                     $('.messages').append($message);
                     return setTimeout(function () {
                         return $message.addClass('appeared');
@@ -504,8 +506,15 @@ var clipboard = new ClipboardJS('.clipboard', {
           let obj = JSON.parse(input);
           let text = obj.data;
           let kind = obj.kind;
+          let stats = obj.stats;
+          let image_data = undefined;
           let prompt_id = obj.prompt_id;
           let $messages = $('.messages');
+
+          if (typeof(text) === 'object') {
+              text = null;
+              image_data = obj.data.dataUrl;
+          }
 
           if ('function' === kind || 'tool' === kind) {
               let func_call = JSON.parse (text);
@@ -529,6 +538,30 @@ var clipboard = new ClipboardJS('.clipboard', {
               $('.loader').show();
               $('.messages').find('.cursor').remove();
               receivingMessage = null;
+          } else if (image_data) {
+
+              var $div = $($('.image-upload-template').clone().html());
+              var $img = $div.find('.user-img-src');
+              $div.find('.user-img-remove').hide();
+              $img.attr("src", image_data);
+              hasImages = true;
+              $div.find('.user-img-zoom-in').on('click', function (e) {
+                  let $img = $(this).siblings('.user-img-src');
+                  let height = $img.height();
+                  height += 50;
+                  if (height >= 480) return;
+                  $img.height(height);
+              });
+              $div.find('.user-img-zoom-out').on('click', function (e) {
+                  let $img = $(this).siblings('.user-img-src');
+                  let height = $img.height();
+                  height -= 50;
+                  if (height <= 120) return;
+                  $img.height(height);
+              });
+              $(".messages").append($div);
+              receivingMessage = null;
+
           } else if (text.trim() === '[DONE]' || text.trim() === '[LENGTH]') {
               // make target
               if (null != receivingMessage) {
@@ -549,6 +582,9 @@ var clipboard = new ClipboardJS('.clipboard', {
               $messages.animate({ scrollTop: $messages.prop('scrollHeight') }, 300);
               if (null == currentChatId) {
                   getCurrentChatId();
+              }
+              if (stats) {
+                  setStats(stats.total, stats.elapsed, stats.tokens, stats.delta);
               }
               $('.stop_wrapper').hide();
           } else if (null == receivingMessage) {
@@ -575,6 +611,27 @@ var clipboard = new ClipboardJS('.clipboard', {
                   $messages.animate({ scrollTop: $messages.prop('scrollHeight') }, 300);
           }
         };
+
+        function TimeHms(msecs) {
+            let sec_num = Math.floor(msecs / 1000);
+            let hours   = Math.floor(sec_num / 3600);
+            let minutes = Math.floor(sec_num / 60) % 60;
+            let seconds = sec_num % 60;
+            let hms = '';
+            if (hours > 0) {
+                hms += `${hours}h `;
+            }
+            if (minutes > 0) {
+                hms += `${minutes}m `;
+            }
+            if (seconds > 0) {
+                hms += `${seconds}s `;
+            }
+            if ('' === hms) {
+                hms = `${msecs/1000}s `;
+            }
+            return hms;
+        }
 
         function timeSince(date) {
             let now = new Date().getTime();
@@ -659,6 +716,10 @@ var clipboard = new ClipboardJS('.clipboard', {
             let lastModelUsed = null;
             let lastMessage = null;
             let hasImages = false;
+            let totalTokens = 0;
+            let totalTime = 0;
+            let lastMessageTokens = undefined;
+            let lastDelta = undefined;
             let fine_tune = null;
             $('.messages').empty();
             items.forEach (function (item) {
@@ -668,6 +729,14 @@ var clipboard = new ClipboardJS('.clipboard', {
                 let func_args = item.func_args;
                 let prompt_id = item.prompt_id;
                 let verified = item.verified ? item.verified : 0;
+                if (!item.state) {
+                    totalTokens += item.tokens ? item.tokens : 0;
+                    totalTime += item.delta ? item.delta : 0;
+                }
+                if (item.tokens && item.tokens > 0) {
+                    lastMessageTokens = item.tokens;
+                    lastDelta = item.delta;
+                }
                 fine_tune = item.fine_tune;
                 if ('user' === role) {
                     sendMessage (prompt_id, text, 'left', false, null);
@@ -732,6 +801,7 @@ var clipboard = new ClipboardJS('.clipboard', {
                 }
 
             });
+            setStats(totalTokens, totalTime, lastMessageTokens, lastDelta);
             markdown_content = '';
             setModel (lastModelUsed);
             setCurrentFineTune(fine_tune);
@@ -833,7 +903,7 @@ var clipboard = new ClipboardJS('.clipboard', {
                 $(this).removeAttr('data-url');
                 $(this).next('.user-img-remove').hide();
             });
-            if ($('.messages .user-image').length > 0 && -1 == currentModel.indexOf('vision')) {
+            if ($('.messages .user-image').length > 0 && -1 == currentModel.indexOf('vision') && -1 ==  currentModel.indexOf('dall-e')) {
                 logoutOnError = false;
                 $('#error-modal .modal-body h4').text('Model not allowed');
                 $('#error-modal .modal-body p').text(`The model ${currentModel} do not support images.`);
@@ -952,7 +1022,7 @@ var clipboard = new ClipboardJS('.clipboard', {
         /* these are for Solid Login gizmo & co */
         async function authLogin() {
             let url = new URL(window.location.href);
-            /*url.search = '';*/
+            url.search = '';
             url.hash = '';
             authClient.login({
                  oidcIssuer: httpBase,
@@ -966,9 +1036,8 @@ var clipboard = new ClipboardJS('.clipboard', {
             let url = new URL(window.location.href);
             let params = new URLSearchParams(url.search);
             let chat_id = params.get('chat_id');
-            params.delete('chat_id');
-            params.append ('resume_chat_id', chat_id);
-            url.search = params.toString();
+            localStorage.setItem ('openlinksw.com:opal:copy:id', chat_id);
+            url.search = '';
             url.hash = '';
             authClient.login({
                  oidcIssuer: httpBase,
@@ -1076,12 +1145,13 @@ var clipboard = new ClipboardJS('.clipboard', {
         async function updateLoginState() {
             if (loggedIn) {
                 let params = new URLSearchParams(wsUrl.search);
-                let resume = pageParams.get('resume_chat_id');
+                let resume = localStorage.getItem('openlinksw.com:opal:copy:id');
                 let opener = localStorage.getItem('openlinksw.com:opal:opener');
                 if (opener) {
                     openerObj = JSON.parse(opener);
                 }
                 localStorage.removeItem('openlinksw.com:opal:opener');
+                localStorage.removeItem('openlinksw.com:opal:copy:id');
                 params.append('sessionId',session.info.sessionId);
                 wsUrl.search = params.toString();
 
@@ -1140,6 +1210,7 @@ var clipboard = new ClipboardJS('.clipboard', {
             url.hash = '';
             await authClient.logout();
             localStorage.removeItem('openlinksw.com:opal:gpt-api-key');
+            localStorage.removeItem('openlinksw.com:opal:copy:id');
             location.replace(url.toString());
         }
         /* baloon for warnings an errors */
@@ -1753,6 +1824,21 @@ var clipboard = new ClipboardJS('.clipboard', {
             setCurrentChat();
         }
 
+        function setStats(total, elapsed, tokens, delta) {
+            if (!total) { 
+                return;
+            }
+            if (total < 1) {
+                $('.stats').html('');
+                return;
+            }
+            if (undefined != tokens && undefined != delta && loggedIn) {
+                $('.stats').html(`Last: ${tokens} tokens in ${delta/1000}s, Total: ${total} tokens, duration ${TimeHms(elapsed)}`);
+            } else {
+                $('.stats').html(`Total: ${total} tokens, duration: ${TimeHms(elapsed)}`);
+            }
+        }
+
 
         async function initSidebar () {
             $('#slide-submenu').on('click',function() {
@@ -1858,7 +1944,7 @@ var clipboard = new ClipboardJS('.clipboard', {
                     freeTextTopicSearch (word);
                     return;
                 }
-                const result = chatTopicsCache.filter((item) => item.title.toUpperCase().indexOf(word.toUpperCase()) != -1);
+                const result = chatTopicsCache.filter((item) => item.title?.toUpperCase().indexOf(word.toUpperCase()) != -1);
                 $('.btn-fliter-clear').show();
                 $('.chat-sessions').find('.user-topic').remove();
                 result.forEach (function (item) {
@@ -1992,7 +2078,6 @@ var clipboard = new ClipboardJS('.clipboard', {
         let params = new URLSearchParams(url.search);
         let restore = !params.has('chat_id');
         let text = pageParams.get('prompt');
-        params.delete('resume_chat_id');
         if (text) {
             openerObj = { prompt_id: getPromptId(), model: pageParams.get('model'), fineTuneId: pageParams.get('module'), text: text };
             localStorage.setItem ('openlinksw.com:opal:opener', JSON.stringify(openerObj));
@@ -2001,6 +2086,7 @@ var clipboard = new ClipboardJS('.clipboard', {
         params.delete('module');
         params.delete('prompt');
         url.search = params.toString();
+
         authClient.handleIncomingRedirect({url: url.toString(), restorePreviousSession: restore}).then ((info) => {
                 loggedIn = info?.isLoggedIn ? info.isLoggedIn : false;
                 $('#loginID').toggleClass('d-none', loggedIn);

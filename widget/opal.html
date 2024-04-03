@@ -119,7 +119,15 @@ h2 {
     border: none;
 }
 
-.close-btn:hover {
+.share-btn {
+    position: absolute;
+    top: 10px;
+    right: 30px;
+    padding: 0 0 0 0;
+    border: none;
+}
+
+.close-btn:hover, .share-btn:hower {
     cursor: pointer;
 }
 
@@ -210,12 +218,17 @@ h2 {
     <div class="messages"></div>
     <textarea placeholder="Type message.." id="message_input" required></textarea>
     <button type="button" class="send"><img src="send.svg"/></button>
-    <span type="button" class="close-btn"><img src="x-circle.svg"/></span>
+    <span type="button" class="share-btn"><img src="svg/paperclip.svg"/></span>
+    <span type="button" class="close-btn"><img src="svg/x-circle.svg"/></span>
   </div>
 </div>
 <!-- these two have to be included in order Opal() to work, the rest about jQuery/Bootstrap/design is deveoper choice -->
 <script src="solid-client-authn.bundle.js"></script>
 <script src="opal.js"></script>
+<!--script src="https://openlinksoftware.github.io/Personal-Assistant/lib/solid-client-authn.bundle.js"
+    integrity="sha256-KNf13GZo7UtMgT6fMJlCy8mqB1/iFNYtPZToH/bx3G8=" crossorigin="anonymous"></script>
+<script src="https://openlinksoftware.github.io/Personal-Assistant/widget/opal.js"
+    integrity="sha256-IbSCTExWvd8jWGo2o/f11k14EuneO260CzzjQ52n6ls=" crossorigin="anonymous"></script-->
 <script>
 var md = window.markdownit({
                                html:true,
@@ -236,7 +249,7 @@ $(function () {
             model: 'gpt-3.5-turbo', // next three are to calibrate model, look at OpenAI docs.
             top_p: 0.5,
             temperature: 0.2,
-            module: 'chat-help', // fine-tune module to init session, e.g. data-twingler-config, chat-help et.c see docs.
+            module: null, // fine-tune module to init session, e.g. data-twingler-config, chat-help et.c see docs.
             functions: [], // backend registered functions, can be added unless not given otherwise via module
         });
     var $currentMessage = undefined; // keep DOM element of the receiving message as it coming on chunks
@@ -334,7 +347,7 @@ $(function () {
                          oidcIssuer: baseUrl,
                          redirectUrl: url,
                          tokenType: 'DPoP',
-                         clientName: 'OpenLink Demo'
+                         clientName: 'OpenLink OPAL Demo'
         });
     }
 
@@ -352,6 +365,7 @@ $(function () {
             opal.connect();
             // end of connecting Opal
             $('.prompt').on ('click', sendPredefinedPrompt);
+            $('.share-btn').on ('click', function () { opal.share('clipboard-link'); });
         }
     }).catch ((e) => {
         errorHandler (e.toString());
